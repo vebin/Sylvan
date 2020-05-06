@@ -7,7 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="..\Sylvan.Tools.SysInfo\InfoWriter.cs" Link="InfoWriter.cs" />
+    <Compile Include="..\Sylvan.Tools.SystemInfo\InfoWriter.cs" Link="InfoWriter.cs" />
   </ItemGroup>
 
   <ItemGroup>
