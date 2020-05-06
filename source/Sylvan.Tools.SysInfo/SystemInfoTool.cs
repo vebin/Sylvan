@@ -11,11 +11,10 @@ using System.Runtime.InteropServices;
 namespace Sylvan.Tools
 {
 	class SystemInfoTool
-	{
-		
+	{		
 		public static void Main()
 		{
-			using var trm = new ColorConsole();
+			using var trm = new VirtualTerminalWriter(Console.Out);
 			var iw = new InfoWriter(trm);
 
 			var isLinux = RuntimeInformation.IsOSPlatform(OSPlatform.Linux);
@@ -228,7 +227,7 @@ namespace Sylvan.Tools
 			["ec"] = "end code",
 		};
 
-		static void LSColors(ColorConsole trm, InfoWriter iw, string key, string value)
+		static void LSColors(VirtualTerminalWriter trm, InfoWriter iw, string key, string value)
 		{
 			var items = value.Split(':');
 
@@ -258,14 +257,14 @@ namespace Sylvan.Tools
 					var itemKey = item.Substring(0, idx);
 					var itemVal = item.Substring(idx + 1);
 					var parts = itemVal.Split(';');
-					foreach (var part in parts)
-					{
-						trm.SetCode(part);
-					}
+					//foreach (var part in parts)
+					//{
+					//	trm.SetCode(part);
+					//}
 
 					trm.Write("(Color)");
 
-					trm.SetDefaults();
+					trm.SetFormatDefault();
 					if (LSKeys.TryGetValue(itemKey, out string desc))
 					{
 						trm.Write(" ");
@@ -276,7 +275,7 @@ namespace Sylvan.Tools
 				trm.WriteLine();
 			}
 
-			trm.SetDefaults();
+			trm.SetFormatDefault();
 		}
 	}
 }

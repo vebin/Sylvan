@@ -17,9 +17,9 @@ namespace Sylvan.Tools
 		int SeparatorColor = 0xa0a0a0;
 		int ValueColor = 0xe0e0e0;
 
-		readonly ColorConsole trm;
+		readonly VirtualTerminalWriter trm;
 
-		public InfoWriter(ColorConsole trm)
+		public InfoWriter(VirtualTerminalWriter trm)
 		{
 			this.trm = trm;
 		}
@@ -52,10 +52,10 @@ namespace Sylvan.Tools
 			SetForegroundColor(HeaderColor);
 		}
 
-		public void Label(string label)
+		public void Label(string label, int width = DefaultNameWidth)
 		{
 			SetLabelColor();
-			trm.Write(label);
+			trm.Write(string.Format("{0," + width + "}", label));
 		}
 
 		public void Separator(string separator = ": ")
@@ -80,7 +80,7 @@ namespace Sylvan.Tools
 				trm.Write(new string(HeaderChar, l));
 			}
 			trm.WriteLine();
-			trm.SetDefaults();
+			trm.SetFormatDefault();
 		}
 
 		public void Value(string name, string value, int width = DefaultNameWidth)
@@ -90,7 +90,7 @@ namespace Sylvan.Tools
 
 		public void Value(string name, IEnumerable<string> values, int width = DefaultNameWidth)
 		{
-			Label(string.Format("{0," + width + "}", name));
+			Label(name, width);
 			Separator();
 			SetValueColor();
 
@@ -109,7 +109,17 @@ namespace Sylvan.Tools
 				trm.WriteLine();
 			}
 
-			trm.SetDefaults();
+			trm.SetFormatDefault();
+		}
+
+		public void Write(string str)
+		{
+			trm.Write(str);
+		}
+
+		public void WriteLine()
+		{
+			trm.WriteLine();
 		}
 	}
 }
