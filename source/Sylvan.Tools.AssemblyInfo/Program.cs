@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Sylvan.Terminal;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.Design.Serialization;
 using System.IO;
@@ -90,6 +91,45 @@ namespace Sylvan.Tools.AssemblyInfo
 		}
 	}
 
+	class CompositeResolver : MetadataAssemblyResolver
+	{
+		MetadataAssemblyResolver[] resolvers;
+		public CompositeResolver(params MetadataAssemblyResolver[] resolvers)
+		{
+			this.resolvers = resolvers;
+		}
+
+		public override Assembly Resolve(MetadataLoadContext context, AssemblyName assemblyName)
+		{
+			foreach (var r in this.resolvers)
+			{
+				var asm = r.Resolve(context, assemblyName);
+				if (asm != null)
+					return asm;
+			}
+			return null;
+		}
+	}
+
+	class DirectoryResolver : MetadataAssemblyResolver
+	{
+		string dir;
+		public DirectoryResolver(string dir)
+		{
+			this.dir = dir;
+		}
+
+		public override Assembly Resolve(MetadataLoadContext context, AssemblyName assemblyName)
+		{
+			var path = Path.Combine(dir, assemblyName.Name + ".dll");
+			if (File.Exists(path))
+			{
+				return context.LoadFromAssemblyPath(path);
+			}
+			return null;
+		}
+	}
+
 	class PeekResolver : MetadataAssemblyResolver
 	{
 		Dictionary<string, Assembly> loaded;
@@ -164,6 +204,8 @@ namespace Sylvan.Tools.AssemblyInfo
 
 		static void Main(string[] args)
 		{
+			var cc = new ColorConsole(Console.Out);
+
 			var path = args[0];
 
 			var (runtime, version) = PeekRuntime(path);
@@ -171,6 +213,7 @@ namespace Sylvan.Tools.AssemblyInfo
 				runtime == Runtime.Framework
 				? (MetadataAssemblyResolver)new FrameworkResolver()
 				: (MetadataAssemblyResolver)new NetCoreResolver(version);
+			res = new CompositeResolver(res, new DirectoryResolver(Path.GetDirectoryName(path)));
 
 			var mlc = new MetadataLoadContext(res);
 
@@ -184,8 +227,8 @@ namespace Sylvan.Tools.AssemblyInfo
 					Console.WriteLine(ca.Value?.ToString());
 				}
 			}
-
-			var refAsms = asm.GetReferencedAssemblies().ToDictionary(a => a.FullName, a => true);
+			var refAsms = new Dictionary<string, bool>();
+			GetTransitiveAssemblies(mlc, refAsms, asm);
 
 			foreach (var type in asm.GetExportedTypes())
 			{
@@ -203,6 +246,15 @@ namespace Sylvan.Tools.AssemblyInfo
 					t = t.BaseType;
 				}
 			}
+
+			foreach (var kvp in refAsms)
+			{
+				if (kvp.Value)
+					cc.SetColor(true, 0xcc, 0xcc, 0xcc);
+				else
+					cc.SetColor(true, 0xcc, 0x88, 0x88);
+				Console.WriteLine(kvp.Key);
+			}
 		}
 
 		static void GetTransitiveAssemblies(MetadataLoadContext mlc, Dictionary<string, bool> d, Assembly asm)
@@ -211,11 +263,16 @@ namespace Sylvan.Tools.AssemblyInfo
 			{
 				if (d.ContainsKey(name.FullName))
 				{
-
+					continue;
 				}
 				else
 				{
+					var child = mlc.LoadFromAssemblyName(name);
+					if (d.ContainsKey(child.FullName))
+						continue;
 
+					d.Add(child.FullName, true);
+					GetTransitiveAssemblies(mlc, d, child);
 				}
 			}
 		}
