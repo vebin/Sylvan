@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "Sylvan.Tools.AssemblyInfo": {
+      "commandName": "Project",
+      "commandLineArgs": "Sylvan.Tools.AssemblyInfo.dll"
+    }
+  }
+}
