@@ -9,7 +9,7 @@
     <VersionPrefix>1.0.0</VersionPrefix>
     <Title>Sylvan system information tool</Title>
     <Description>A .NET global tool that outputs system information.</Description>
-    <PackageTags>systeminfo;dotnet;global;tool</PackageTags>
+    <PackageTags>system;information;sysinfo</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>

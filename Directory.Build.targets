@@ -1,5 +1,6 @@
 <Project>
   <PropertyGroup>
+    <PackageTags Condition="$(Project.StartsWith('Sylvan.Tools.'))">$(PackageTags);global;tool</PackageTags>
     <PackageTags>$(PackageTags);.NET;Sylvan</PackageTags>
   </PropertyGroup>
   <Target Name="PrepareNupkg" BeforeTargets="ResolvePackageAssets">

@@ -1,9 +1,12 @@
-﻿using Sylvan.Terminal;
+﻿using Microsoft.Extensions.DependencyModel;
+using Sylvan.Terminal;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.Loader;
 using System.Runtime.Versioning;
 using System.Threading.Tasks;
 
@@ -66,8 +69,6 @@ namespace Sylvan.Tools
 			//ColorConsole.Enable();
 			w.Value("Tool Version", typeof(AssemblyInfoTool).Assembly.GetName().Version.ToString());
 
-			
-
 			var path = args[0];
 
 			var (runtime, version) = PeekRuntime(path);
@@ -81,11 +82,19 @@ namespace Sylvan.Tools
 			var mlc = new MetadataLoadContext(res);
 
 			var asm = mlc.LoadFromAssemblyPath(path);
+			//var dc = DependencyContextLoader.Default.Load(asm);
+			var loc = asm.Location;
+			var jdf = Path.Combine(Path.GetDirectoryName(loc),asm.GetName().Name +".deps.json");
+
+			var sw = Stopwatch.StartNew();
+			var r = new AssemblyDependencyResolver(asm.Location);
+			sw.Stop();
+
+
 
 			w.Header("Assembly");
 			w.Value("Name", asm.GetName().Name);
 			w.Value("Version", asm.GetName().Version.ToString());
-
 
 
 			var attrs = asm.GetCustomAttributesData();
@@ -99,6 +108,14 @@ namespace Sylvan.Tools
 			}
 
 			var asms = asm.GetReferencedAssemblies();
+
+			foreach(var aa in asms)
+			{
+				var p = r.ResolveAssemblyToPath(aa);
+				Console.WriteLine(aa.Name);
+				Console.WriteLine(p);
+
+			}
 			var refAsms = asms.ToDictionary(a => a.FullName, a => true);
 
 			void SeeAssembly(Assembly a)
@@ -115,7 +132,6 @@ namespace Sylvan.Tools
 				SeeAssembly(t.Assembly);
 			}
 
-
 			foreach (var type in asm.GetExportedTypes().OrderBy(t => t.FullName))
 			{
 				trm.WriteLine(type.FullName);
@@ -126,22 +142,22 @@ namespace Sylvan.Tools
 					SeeType(t);
 					t = t.BaseType;
 				}
-				
+
 				var props = type.GetProperties();
 				foreach (var prop in props)
 				{
 					SeeType(prop.PropertyType);
-					foreach(var p in prop.GetIndexParameters())
+					foreach (var p in prop.GetIndexParameters())
 					{
 						SeeType(p.ParameterType);
 					}
 				}
 
 				var methods = type.GetMethods();
-				foreach(var method in methods)
+				foreach (var method in methods)
 				{
 					SeeType(method.ReturnType);
-					foreach(var p in method.GetParameters())
+					foreach (var p in method.GetParameters())
 					{
 						SeeType(p.ParameterType);
 					}
@@ -153,8 +169,6 @@ namespace Sylvan.Tools
 
 			foreach (var kvp in refAsms.OrderBy(a => new AssemblyName(a.Key).Name))
 			{
-				
-
 				var name = new AssemblyName(kvp.Key);
 				w.Label(name.Name, len);
 				w.Separator();
@@ -171,7 +185,7 @@ namespace Sylvan.Tools
 					trm.SetForeground(0xcc, 0x88, 0x88);
 					w.Write("public");
 				}
-				
+
 				w.WriteLine();
 			}
 		}

@@ -2,7 +2,7 @@
   "profiles": {
     "Sylvan.Tools.AssemblyInfo": {
       "commandName": "Project",
-      "commandLineArgs": "Sylvan.Benchmarks.dll"
+      "commandLineArgs": "Sylvan.Common.dll"
     }
   }
 }
