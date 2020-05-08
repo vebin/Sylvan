@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.Loader;
 using System.Text.RegularExpressions;
 
 namespace Sylvan.Tools
@@ -55,34 +57,37 @@ namespace Sylvan.Tools
 
 	class NetCoreResolver : MetadataAssemblyResolver
 	{
-		string libRoot;
-		Version ver;
-		string verStr;
+		string path;
+		AssemblyDependencyResolver adr;
+		string coreAsmName;
+		Assembly coreAsm;
+		string coreAsmDir;
 
-		public NetCoreResolver(Version ver)
+		public NetCoreResolver(string path)
 		{
-			this.libRoot = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "dotnet", "shared", "Microsoft.NETCore.App");
-			this.ver = ver;
-			this.verStr = ver.ToString();
+			this.path = path;
+			this.adr = new AssemblyDependencyResolver(path);
+			this.coreAsm = typeof(object).Assembly;
+			this.coreAsmName = coreAsm.GetName().Name;
+			this.coreAsmDir = Path.GetDirectoryName(coreAsm.Location);
 		}
 
 		public override Assembly Resolve(MetadataLoadContext context, AssemblyName assemblyName)
 		{
-
-			foreach (var dir in Directory.EnumerateDirectories(libRoot))
+			var asmPath = this.adr.ResolveAssemblyToPath(assemblyName);
+			if (asmPath == null)
 			{
-				var name = Path.GetFileName(dir);
-				if (name.StartsWith(verStr))
+				asmPath = Path.Combine(coreAsmDir, assemblyName.Name + ".dll");
+				if (!File.Exists(asmPath))
 				{
-					var file = Path.Combine(dir, assemblyName.Name + ".dll");
-					if (File.Exists(file))
-					{
-						return context.LoadFromAssemblyPath(file);
-					}
+					asmPath = null;
 				}
-
 			}
-			return null;
+
+			if (asmPath == null) return null;
+			Debug.WriteLine("Loading: " + asmPath);
+			var asm = context.LoadFromAssemblyPath(asmPath);
+			return asm;
 		}
 	}
 

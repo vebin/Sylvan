@@ -1,19 +1,18 @@
-﻿using Microsoft.Extensions.DependencyModel;
+﻿using System.Runtime.CompilerServices;
 using Sylvan.Terminal;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Runtime.Loader;
 using System.Runtime.Versioning;
 using System.Threading.Tasks;
 
 namespace Sylvan.Tools
 {
-	enum Runtime
+	enum DotNetRuntime
 	{
+		Unknown,
 		Framework,
 		Core,
 		NetStandard,
@@ -31,7 +30,7 @@ namespace Sylvan.Tools
 
 	class AssemblyInfoTool
 	{
-		static (Runtime, Version) PeekRuntime(string file)
+		static (DotNetRuntime, Version) IdentifyRuntime(string file)
 		{
 			var res = new PeekResolver();
 			//var coreName = typeof(object).Assembly.GetName().Name;
@@ -51,15 +50,16 @@ namespace Sylvan.Tools
 					var ver = new Version(parts[1].Split('=')[1].Trim('v'));
 					switch (rt)
 					{
+						case ".NETStandard":
+							return (DotNetRuntime.NetStandard, ver);
 						case ".NETCoreApp":
-							return (Runtime.Core, ver);
-						default:
+							return (DotNetRuntime.Core, ver);						
 						case ".NETFramework":
-							return (Runtime.Framework, ver);
+							return (DotNetRuntime.Framework, ver);
 					}
 				}
 			}
-			return (Runtime.Framework, new Version(2, 0));
+			return (DotNetRuntime.Unknown, null);
 		}
 
 		static void Main(string[] args)
@@ -71,51 +71,33 @@ namespace Sylvan.Tools
 
 			var path = args[0];
 
-			var (runtime, version) = PeekRuntime(path);
+			var (runtime, version) = IdentifyRuntime(path);
 
 			MetadataAssemblyResolver res =
-				runtime == Runtime.Framework
+				runtime == DotNetRuntime.Framework
 				? (MetadataAssemblyResolver)new FrameworkResolver()
-				: (MetadataAssemblyResolver)new NetCoreResolver(version);
+				: (MetadataAssemblyResolver)new NetCoreResolver(path);
 			res = new CompositeResolver(res, new DirectoryResolver(Path.GetDirectoryName(path)));
 
-			var mlc = new MetadataLoadContext(res);
+			var mlc = new MetadataLoadContext(res, runtime == DotNetRuntime.Framework ? "mscorlib" : "System.Private.CoreLib");
 
 			var asm = mlc.LoadFromAssemblyPath(path);
-			//var dc = DependencyContextLoader.Default.Load(asm);
-			var loc = asm.Location;
-			var jdf = Path.Combine(Path.GetDirectoryName(loc),asm.GetName().Name +".deps.json");
-
-			var sw = Stopwatch.StartNew();
-			var r = new AssemblyDependencyResolver(asm.Location);
-			sw.Stop();
-
-
 
 			w.Header("Assembly");
 			w.Value("Name", asm.GetName().Name);
 			w.Value("Version", asm.GetName().Version.ToString());
 
-
 			var attrs = asm.GetCustomAttributesData();
 			foreach (var attr in attrs)
 			{
-				trm.WriteLine(attr.AttributeType.FullName.ToString());
+				//trm.WriteLine(attr.AttributeType.FullName.ToString());
 				foreach (var ca in attr.ConstructorArguments)
 				{
-					trm.WriteLine(ca.Value?.ToString());
+					//trm.WriteLine(ca.Value?.ToString());
 				}
 			}
 
 			var asms = asm.GetReferencedAssemblies();
-
-			foreach(var aa in asms)
-			{
-				var p = r.ResolveAssemblyToPath(aa);
-				Console.WriteLine(aa.Name);
-				Console.WriteLine(p);
-
-			}
 			var refAsms = asms.ToDictionary(a => a.FullName, a => true);
 
 			void SeeAssembly(Assembly a)
@@ -134,8 +116,8 @@ namespace Sylvan.Tools
 
 			foreach (var type in asm.GetExportedTypes().OrderBy(t => t.FullName))
 			{
-				trm.WriteLine(type.FullName);
-
+				//trm.WriteLine(type.FullName);
+				
 				var t = type.BaseType;
 				while (t != null)
 				{
@@ -166,13 +148,12 @@ namespace Sylvan.Tools
 
 			w.Header("References");
 			var len = refAsms.Keys.Select(k => new AssemblyName(k).Name).Max(n => n.Length);
-
+			var fmt = "{0,-" + len + "}";
 			foreach (var kvp in refAsms.OrderBy(a => new AssemblyName(a.Key).Name))
 			{
 				var name = new AssemblyName(kvp.Key);
-				w.Label(name.Name, len);
-				w.Separator();
 				w.SetValueColor();
+				w.Write(string.Format(fmt, name.Name));
 				w.Write(name.Version.ToString());
 				w.Write(" ");
 				if (kvp.Value)
@@ -188,6 +169,14 @@ namespace Sylvan.Tools
 
 				w.WriteLine();
 			}
+		}
+
+		class AssemblyReferenceInformation
+		{
+			public string Name { get; set; }
+			public Version Version { get; set; }
+			public bool IsPrivate { get; set; }
+			public bool IsFramework { get; set; }
 		}
 
 		//static void GetTransitiveAssemblies(MetadataLoadContext mlc, Dictionary<string, bool> d, Assembly asm)
@@ -211,6 +200,7 @@ namespace Sylvan.Tools
 		//}
 	}
 
+	
 	public class F : Dictionary<string, string>
 	{
 		public VirtualTerminalWriter PP { get; set; }
@@ -218,6 +208,7 @@ namespace Sylvan.Tools
 
 	public class TestClass
 	{
+		public FileStream F { get; set; }
 
 		public Dictionary<string, string> Data { get; set; }
 		public Uri Location { get; set; }
