@@ -11,7 +11,9 @@ using System.Runtime.InteropServices;
 namespace Sylvan.Tools
 {
 	class SystemInfoTool
-	{		
+	{
+
+		
 		public static void Main()
 		{
 			using var trm = new VirtualTerminalWriter(Console.Out);
@@ -41,33 +43,30 @@ namespace Sylvan.Tools
 			iw.Value("OSVersion", Environment.OSVersion.ToString());
 			iw.Value("ProcessorCount", Environment.ProcessorCount.ToString());
 			iw.Value("SystemPageSize", Environment.SystemPageSize.ToString());
-
+			iw.Value("OSPlatform", Environment.Is64BitOperatingSystem ? "64" : "32");
+			
 			var tickCount = Environment.TickCount64;
 			iw.Value("SystemStarted", DateTime.Now.AddMilliseconds(-tickCount).ToString() + " (local)");
 			iw.Value("SystemUpTime", TimeSpan.FromMilliseconds(tickCount).ToString(@"d\.hh\:mm\:ss\.fff"));
 
-			iw.Header("Special Folders");
-			var specialFolders =
-				Enum.GetNames(typeof(Environment.SpecialFolder))
-					.Zip(Enum.GetValues(typeof(Environment.SpecialFolder)).Cast<Environment.SpecialFolder>(),
-							(name, value) => new
-							{
-								Name = name,
-								Path = Environment.GetFolderPath(value, Environment.SpecialFolderOption.DoNotVerify),
-							})
-					.OrderBy(sf => sf.Name, StringComparer.OrdinalIgnoreCase)
-					.ToArray();
+			iw.Header("Memory");
+			var mi = Memory.GetMemoryInfo();
+			if (mi != null)
+			{
+				iw.Value("Total", FormatSize(mi.Total));
+				iw.Value("Available", FormatSize(mi.Available));
+			} else
+			{
+				iw.Value("Total", "unknown");
+				iw.Value("Available", "unknown");
+			}
 
-			var maxSpecialFolderNameWith = specialFolders.Max(sf => sf.Name.Length) + 1;
-
-			foreach (var specialFolder in specialFolders)
-				iw.Value(specialFolder.Name, specialFolder.Path, maxSpecialFolderNameWith);
 
 			iw.Header("Storage");
 			var drives = DriveInfo.GetDrives();
 
 			bool first = true;
-			foreach (var drive in drives)
+			foreach (var drive in drives.Where(d => d.DriveType == DriveType.Fixed))
 			{
 				if (first)
 				{
@@ -98,9 +97,27 @@ namespace Sylvan.Tools
 				}
 			}
 
+			iw.Header("Special Folders");
+			var specialFolders =
+				Enum.GetNames(typeof(Environment.SpecialFolder))
+					.Zip(Enum.GetValues(typeof(Environment.SpecialFolder)).Cast<Environment.SpecialFolder>(),
+							(name, value) => new
+							{
+								Name = name,
+								Path = Environment.GetFolderPath(value, Environment.SpecialFolderOption.DoNotVerify),
+							})
+					.Where(sf => !string.IsNullOrEmpty(sf.Path))
+					.OrderBy(sf => sf.Name, StringComparer.OrdinalIgnoreCase)
+					.ToArray();
+
+			var maxSpecialFolderNameWith = specialFolders.Max(sf => sf.Name.Length) + 1;
+
+			foreach (var specialFolder in specialFolders)
+				iw.Value(specialFolder.Name, specialFolder.Path, maxSpecialFolderNameWith);
+
 			iw.Header("Time");
-			iw.Value("UTC Time", DateTime.UtcNow.ToString());
-			iw.Value("Local Time", DateTime.Now.ToString());
+			iw.Value("UTC Time", DateTime.UtcNow.ToString("u"));
+			iw.Value("Local Time", DateTime.Now.ToString("u"));
 			iw.Value("TimeZone", TimeZoneInfo.Local.StandardName);
 
 
