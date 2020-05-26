@@ -45,12 +45,8 @@ namespace Sylvan.Terminal
 			DisableNewLineAutoReturn = 0x0008,
 		}
 
-		public static void Enable()
-		{
-			EnableVTProcessing();
-		}
 
-		internal static bool EnableVTProcessing()
+		public static bool EnableVirtualTerminalProcessing()
 		{
 			return SetOutputMode(ConsoleOutputMode.EnableVirtualTerminalProcessing, true);
 		}

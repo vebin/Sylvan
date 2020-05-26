@@ -32,7 +32,7 @@ namespace Sylvan.Tools
 	{
 		static void Main(string[] args)
 		{
-
+			ConsoleMode.EnableVirtualTerminalProcessing();
 			var trm = new VirtualTerminalWriter(Console.Out);
 			using IInfoWriter w = new TerminalInfoWriter(trm);
 
@@ -40,6 +40,8 @@ namespace Sylvan.Tools
 
 			w.WriteValue("Tool Version", typeof(AssemblyInfoTool).Assembly.GetName().Version.ToString());
 
+			if (args.Length < 1) return;
+				
 			var path = args[0];
 			var asm = LoadAssembly(path);
 
@@ -338,12 +340,16 @@ namespace Sylvan.Tools
 				var methods = type.GetMethods();
 				foreach (var method in methods)
 				{
-					SeeType(method.ReturnType);
-					foreach (var p in method.GetParameters())
+					try
 					{
-						SeeType(p.ParameterType);
+						SeeType(method.ReturnType);
+						foreach (var p in method.GetParameters())
+						{
+							SeeType(p.ParameterType);
+						}
+						var l = method.GetMethodBody()?.GetILAsByteArray()?.Length ?? 0;
 					}
-					var l = method.GetMethodBody()?.GetILAsByteArray()?.Length ?? 0;
+					catch (Exception) { }
 				}
 			}
 

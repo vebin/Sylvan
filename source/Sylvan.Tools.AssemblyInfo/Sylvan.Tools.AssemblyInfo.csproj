@@ -8,7 +8,7 @@
     <ToolCommandName>asminfo</ToolCommandName>
 
     <VersionPrefix>0.1.0</VersionPrefix>
-    <VersionSuffix>B0001</VersionSuffix>
+    <VersionSuffix>B0003</VersionSuffix>
     <Title>Sylvan assembly information tool</Title>
     <Description>A .NET global tool that outputs information about an assembly.</Description>
     <PackageTags>assembly;information;asminfo</PackageTags>

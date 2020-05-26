@@ -153,6 +153,12 @@ namespace Sylvan.Tools
 				var asm = loaded[name];
 				return context.LoadFromAssemblyPath(asm.Location);
 			}
+			if(name == "mscorlib")
+			{
+				var coreLib = loaded["System.Private.CoreLib"].Location;
+				var root = Path.GetDirectoryName(coreLib);
+				return context.LoadFromAssemblyPath(Path.Combine(root, name + ".dll"));
+			}
 			return null;
 		}
 	}

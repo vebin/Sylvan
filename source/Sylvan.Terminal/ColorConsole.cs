@@ -19,7 +19,7 @@ namespace Sylvan.Terminal
 		Down = 1,
 	}
 
-	public partial class ColorConsole : TextWriter
+	internal partial class ColorConsole : TextWriter
     {
 		readonly TextWriter tw;
 		char[] buffer;
@@ -44,7 +44,7 @@ namespace Sylvan.Terminal
 		{
 			if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
 			{
-				return ConsoleMode.EnableVTProcessing();
+				return ConsoleMode.EnableVirtualTerminalProcessing();
 			}
 			// other platforms should support VT escape sequences normally, I think... ?
 			return true;
