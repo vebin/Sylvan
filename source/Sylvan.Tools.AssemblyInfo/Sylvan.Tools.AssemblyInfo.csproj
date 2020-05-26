@@ -21,7 +21,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Include="..\Sylvan.Tools.SystemInfo\InfoWriter.cs" Link="InfoWriter.cs" />
+    <Compile Include="..\Sylvan.Tools.SystemInfo\TerminalInfoWriter.cs" Link="TerminalInfoWriter.cs" />
   </ItemGroup>
   
 </Project>

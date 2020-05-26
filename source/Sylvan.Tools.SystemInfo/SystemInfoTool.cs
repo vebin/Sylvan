@@ -12,12 +12,10 @@ namespace Sylvan.Tools
 {
 	class SystemInfoTool
 	{
-
-		
 		public static void Main()
 		{
 			using var trm = new VirtualTerminalWriter(Console.Out);
-			var iw = new InfoWriter(trm);
+			var iw = new TerminalInfoWriter(trm);
 
 			var isLinux = RuntimeInformation.IsOSPlatform(OSPlatform.Linux);
 			var isOSX = RuntimeInformation.IsOSPlatform(OSPlatform.OSX);
@@ -244,7 +242,7 @@ namespace Sylvan.Tools
 			["ec"] = "end code",
 		};
 
-		static void LSColors(VirtualTerminalWriter trm, InfoWriter iw, string key, string value)
+		static void LSColors(VirtualTerminalWriter trm, TerminalInfoWriter iw, string key, string value)
 		{
 			var items = value.Split(':');
 

@@ -44,7 +44,7 @@ namespace Sylvan.Terminal
 		{
 			if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
 			{
-				return EnableVTProcessing();
+				return ConsoleMode.EnableVTProcessing();
 			}
 			// other platforms should support VT escape sequences normally, I think... ?
 			return true;

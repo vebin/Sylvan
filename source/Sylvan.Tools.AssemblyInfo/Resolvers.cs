@@ -130,13 +130,18 @@ namespace Sylvan.Tools
 		}
 	}
 
+	/// <summary>
+	/// A metadata resolver that uses the currently loaded assembly set to resolve.
+	/// This is used to "peek" into the assembly just enough to identify the target runtime
+	/// which requires only the "core" assembly, System.Private.CoreLib in the case of netcoreapp.
+	/// </summary>
 	class PeekResolver : MetadataAssemblyResolver
 	{
 		Dictionary<string, Assembly> loaded;
 
 		public PeekResolver()
 		{
-			// todo: this could throw
+			// todo: could this throw?
 			this.loaded = AppDomain.CurrentDomain.GetAssemblies().ToDictionary(a => a.GetName().Name, a => a);
 		}
 

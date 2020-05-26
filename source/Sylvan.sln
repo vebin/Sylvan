@@ -25,7 +25,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tools", "Tools", "{38AEC6F9
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Sylvan.Tools.SystemInfo", "Sylvan.Tools.SystemInfo\Sylvan.Tools.SystemInfo.csproj", "{7FE08757-86A4-4E5D-AB4F-8645A03A7493}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sylvan.Tools.AssemblyInfo", "Sylvan.Tools.AssemblyInfo\Sylvan.Tools.AssemblyInfo.csproj", "{3E4F41F8-F8DD-48C8-A2B3-31549D22B570}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Sylvan.Tools.AssemblyInfo", "Sylvan.Tools.AssemblyInfo\Sylvan.Tools.AssemblyInfo.csproj", "{3E4F41F8-F8DD-48C8-A2B3-31549D22B570}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
