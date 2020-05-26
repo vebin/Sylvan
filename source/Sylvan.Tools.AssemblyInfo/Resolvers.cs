@@ -138,11 +138,13 @@ namespace Sylvan.Tools
 	class PeekResolver : MetadataAssemblyResolver
 	{
 		Dictionary<string, Assembly> loaded;
-
+		string root;
 		public PeekResolver()
 		{
 			// todo: could this throw?
 			this.loaded = AppDomain.CurrentDomain.GetAssemblies().ToDictionary(a => a.GetName().Name, a => a);
+			var coreLib = loaded["System.Private.CoreLib"].Location;
+			this.root = Path.GetDirectoryName(coreLib);
 		}
 
 		public override Assembly Resolve(MetadataLoadContext context, AssemblyName assemblyName)
@@ -153,10 +155,10 @@ namespace Sylvan.Tools
 				var asm = loaded[name];
 				return context.LoadFromAssemblyPath(asm.Location);
 			}
-			if(name == "mscorlib")
+
+			var path = Path.Combine(root, name + ".dll");
+			if (File.Exists(path))
 			{
-				var coreLib = loaded["System.Private.CoreLib"].Location;
-				var root = Path.GetDirectoryName(coreLib);
 				return context.LoadFromAssemblyPath(Path.Combine(root, name + ".dll"));
 			}
 			return null;
