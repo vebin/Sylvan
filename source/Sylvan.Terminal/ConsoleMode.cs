@@ -69,7 +69,7 @@ namespace Sylvan.Terminal
 		{
 			try
 			{
-				var handle = GetStdHandle(new IntPtr(ConsoleDevice.StdInput));
+				var handle = GetStdHandle(new IntPtr(device));
 				uint flags = 0;
 				GetConsoleMode(handle, out flags);
 				if (enable)
@@ -80,7 +80,7 @@ namespace Sylvan.Terminal
 				{
 					flags &= ~flag;
 				}
-				var result = SetConsoleMode(handle, flags);
+				SetConsoleMode(handle, flags);
 				return true;
 			}
 			catch (Exception)
