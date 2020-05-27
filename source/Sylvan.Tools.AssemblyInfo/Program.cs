@@ -406,22 +406,30 @@ namespace Sylvan.Tools
 			var attrs = asm.GetCustomAttributesData();
 			foreach (var attr in attrs)
 			{
-				if (attr.AttributeType.FullName == tfa)
+				try
 				{
-					var arg = attr.ConstructorArguments[0];
-					var val = (string)arg.Value;
-					var parts = val.Split(',');
-					var rt = parts[0];
-					var ver = new Version(parts[1].Split('=')[1].Trim('v'));
-					switch (rt)
+					if (attr.AttributeType.FullName == tfa)
 					{
-						case ".NETStandard":
-							return (DotNetRuntime.NetStandard, ver);
-						case ".NETCoreApp":
-							return (DotNetRuntime.Core, ver);
-						case ".NETFramework":
-							return (DotNetRuntime.Framework, ver);
+						var arg = attr.ConstructorArguments[0];
+						var val = (string)arg.Value;
+						var parts = val.Split(',');
+						var rt = parts[0];
+						var ver = new Version(parts[1].Split('=')[1].Trim('v'));
+						switch (rt)
+						{
+							case ".NETStandard":
+								return (DotNetRuntime.NetStandard, ver);
+							case ".NETCoreApp":
+								return (DotNetRuntime.Core, ver);
+							case ".NETFramework":
+								return (DotNetRuntime.Framework, ver);
+						}
 					}
+				}
+				catch (Exception) { 
+					// there can be attributes that are defined in inaccessible assemblies.
+					// we don't care about them for this purpose though. We are only looking
+					// for the TargetFrameworkAttribute which comes from corelib.
 				}
 			}
 			return (DotNetRuntime.Unknown, null);
