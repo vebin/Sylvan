@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
@@ -173,7 +172,7 @@ namespace Sylvan.Terminal
 			await this.output.FlushAsync();
 		}
 
-		public void CursorMove(Direction d, byte c = 1)
+		public void CursorMove(CursorDirection d, byte c = 1)
 		{
 			WriteCode(GetCode(d), c);
 		}
@@ -497,7 +496,7 @@ namespace Sylvan.Terminal
 		}
 
 
-		static char GetCode(Direction d)
+		static char GetCode(CursorDirection d)
 		{
 			return (char)(Code.CursorUp + (int)d);
 		}

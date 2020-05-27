@@ -52,11 +52,15 @@ namespace Sylvan.Tools
 			var attrs = asm.GetCustomAttributesData();
 			foreach (var attr in attrs)
 			{
-				//trm.WriteLine(attr.AttributeType.FullName.ToString());
-				foreach (var ca in attr.ConstructorArguments)
+				try
 				{
-					//	trm.WriteLine(ca.Value?.ToString());
+					trm.WriteLine(attr.AttributeType.FullName.ToString());
+					foreach (var ca in attr.ConstructorArguments)
+					{
+						//	trm.WriteLine(ca.Value?.ToString());
+					}
 				}
+				catch (Exception) { }
 			}
 
 			var refAsms = GetReferences(asm);
