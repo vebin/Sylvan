@@ -439,9 +439,4 @@ namespace Sylvan.Tools
 			return (DotNetRuntime.Unknown, null);
 		}
 	}
-
-	public class MyClass
-	{
-		public class MyNestedClass { }
-	}
 }
