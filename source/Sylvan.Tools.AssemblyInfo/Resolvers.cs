@@ -57,18 +57,14 @@ namespace Sylvan.Tools
 
 	class NetCoreResolver : MetadataAssemblyResolver
 	{
-		string path;
 		AssemblyDependencyResolver adr;
-		string coreAsmName;
 		Assembly coreAsm;
 		string coreAsmDir;
 
 		public NetCoreResolver(string path)
 		{
-			this.path = path;
 			this.adr = new AssemblyDependencyResolver(path);
 			this.coreAsm = typeof(object).Assembly;
-			this.coreAsmName = coreAsm.GetName().Name;
 			this.coreAsmDir = Path.GetDirectoryName(coreAsm.Location);
 		}
 
@@ -85,7 +81,6 @@ namespace Sylvan.Tools
 			}
 
 			if (asmPath == null) return null;
-			Debug.WriteLine("Loading: " + asmPath);
 			var asm = context.LoadFromAssemblyPath(asmPath);
 			return asm;
 		}

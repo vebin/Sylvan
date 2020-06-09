@@ -152,7 +152,10 @@ namespace Sylvan.Tools
 
 		void IInfoWriter.WriteValue(string name, string value)
 		{
-			xml.WriteAttributeString(NormalizeName(name), value);
+			xml.WriteStartElement(NormalizeName(name));
+			xml.WriteValue(value);
+			xml.WriteEndElement();
+			//xml.WriteAttributeString(NormalizeName(name), value);
 		}
 
 		void IInfoWriter.WriteTree<T>(string name, IInfoNode<T> data)

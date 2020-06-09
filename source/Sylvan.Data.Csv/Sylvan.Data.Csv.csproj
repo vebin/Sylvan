@@ -5,7 +5,7 @@
     <Version>0.4.1</Version>
     <Description>A .NET library for reading and writing delimited CSV data.</Description>
     <PackageTags>csv;delimited;datareader;async</PackageTags>    
-    <Nullable>enable</Nullable>    
+    <Nullable>enable</Nullable>
   </PropertyGroup>
 
   <ItemGroup>

@@ -37,15 +37,17 @@ namespace Sylvan.Terminal
 		//	return offset + l;
 		//}
 
-		public static int WriteValue(this char[] s, int offset, byte value)
+		public static int WriteValue(this char[] s, int offset, int value)
 		{
 			var l = WriteByte(s, offset, value);
 			return offset + l;
 		}
 
-		static byte WriteByte(char[] buffer, int offset, byte value)
+		static byte WriteByte(char[] buffer, int offset, int value)
 		{
-			var len = StringLength(value);
+			if (value > 255) throw new ArgumentOutOfRangeException(nameof(value));
+
+			var len = StringLength((byte)value);
 			int index = len;
 
 			do
@@ -91,15 +93,16 @@ namespace Sylvan.Terminal
 
 	public class VirtualTerminalWriter : TextWriter
 	{
-		const char Escape = '\x1b';
-		const char Backspace = '\x7f';
-		const char Pause = '\x1a';
+		const string Escape = "\x1b";
+		const string Backspace = "\x7f";
+		const string Pause = "\x1a";
 
-		const char ValueStart = '[';
-		const char ValueContinue = ';';
-		const char Mode = '?';
+		const string ValueStart = "[";
+		const string ValueContinue = ";";
+		const string Mode = "?";
+
 		char[] buffer = new char[128];
-		byte[] args = new byte[8];
+		int[] args = new int[8];
 		string newLine = Environment.NewLine;
 
 		static class Code
@@ -172,7 +175,7 @@ namespace Sylvan.Terminal
 			await this.output.FlushAsync();
 		}
 
-		public void CursorMove(CursorDirection d, byte c = 1)
+		public void CursorMove(CursorDirection d, int c = 1)
 		{
 			WriteCode(GetCode(d), c);
 		}
@@ -188,11 +191,21 @@ namespace Sylvan.Terminal
 			Output(str);
 		}
 
-		public void SetCursorPosition(byte x, byte y)
+		public void SetCursorPosition(int x, int y)
 		{
-			args[0] = x;
-			args[1] = y;
+			args[0] = y;
+			args[1] = x;
 			WriteCode(Code.CursorPosition, args, 2);
+		}
+
+		public void SaveCursorPosition()
+		{
+			Output(Escape + "[s");
+		}
+
+		public void RestoreCursorPosition()
+		{
+			Output(Escape + "[u");
 		}
 
 		public void SetCursorBlink(bool enable)
@@ -219,42 +232,42 @@ namespace Sylvan.Terminal
 			Output(Escape + "[" + chars + "K");
 		}
 
-		public void Scroll(ScrollDirection dir, byte count = 1)
+		public void Scroll(ScrollDirection dir, int count = 1)
 		{
 			WriteCode(GetCode(dir), count);
 		}
 
-		public void Insert(byte count = 1)
+		public void Insert(int count = 1)
 		{
 			WriteCode(Code.Insert, count);
 		}
 
-		public void Delete(byte count = 1)
+		public void Delete(int count = 1)
 		{
 			WriteCode(Code.Delete, count);
 		}
 
-		public void Erase(byte count = 1)
+		public void Erase(int count = 1)
 		{
 			WriteCode(Code.Erase, count);
 		}
 
-		public void InsertLine(byte count = 1)
+		public void InsertLine(int count = 1)
 		{
 			WriteCode(Code.InsertLine, count);
 		}
 
-		public void DeleteLine(byte count = 1)
+		public void DeleteLine(int count = 1)
 		{
 			WriteCode(Code.DeleteLine, count);
 		}
 
-		public void EraseInDisplay(byte count)
+		public void EraseInDisplay(int count)
 		{
 			WriteCode('J', count);
 		}
 
-		public void EraseInLine(byte count)
+		public void EraseInLine(int count)
 		{
 			WriteCode('K', count);
 		}
@@ -286,22 +299,22 @@ namespace Sylvan.Terminal
 
 		public void SetForeground(Color c)
 		{
-			WriteCode(Code.Format, (byte)(30 + c));
+			WriteCode(Code.Format, (int)(30 + c));
 		}
 
 		public void SetBackground(Color c)
 		{
-			WriteCode(Code.Format, (byte)(40 + c));
+			WriteCode(Code.Format, (int)(40 + c));
 		}
 
 		public void SetForegroundBright(Color c)
 		{
-			WriteCode(Code.Format, (byte)(90 + c));
+			WriteCode(Code.Format, (int)(90 + c));
 		}
 
 		public void SetBackgroundBright(Color c)
 		{
-			WriteCode(Code.Format, (byte)(100 + c));
+			WriteCode(Code.Format, (int)(100 + c));
 		}
 
 		void SetColor(Color c, char op)
@@ -398,8 +411,8 @@ namespace Sylvan.Terminal
 		{
 			char[] code = buffer;
 			int i = 0;
-			code[i++] = Escape;
-			code[i++] = ValueStart;
+			code[i++] = Escape[0];
+			code[i++] = ValueStart[0];
 			code[i++] = op;
 			code[i++] = (char)('0' + (int)c);
 			code[i++] = Code.Format;
@@ -424,7 +437,7 @@ namespace Sylvan.Terminal
 			if (str.Length > 255) throw new ArgumentException();
 			char[] code = buffer;
 			int i = 0;
-			code[i++] = Escape;
+			code[i++] = Escape[0];
 			code[i++] = ']';
 			code[i++] = '2';
 			code[i++] = ';';
@@ -460,34 +473,34 @@ namespace Sylvan.Terminal
 			Output(Escape + "[?1049l");
 		}
 
-		void WriteCode(char c, byte count)
+		void WriteCode(char c, int v)
 		{
-			if (count == 0)
+			if (v == 0)
 			{
 				return;
 			}
 
 			char[] code = buffer;
 			int i = 0;
-			code[i++] = Escape;
-			if (count > 1)
+			code[i++] = Escape[0];
+			if (v > 1)
 			{
-				code[i++] = ValueStart;
-				i = code.WriteValue(i, count);
+				code[i++] = ValueStart[0];
+				i = code.WriteValue(i, v);
 			}
 
 			code[i++] = c;
 			Output(code, i);
 		}
 
-		void WriteCode(char c, byte[] args, int argCount)
+		void WriteCode(char c, int[] args, int argCount)
 		{
 			char[] code = buffer;
 			int i = 0;
-			code[i++] = Escape;
+			code[i++] = Escape[0];
 			for (int a = 0; a < argCount; a++)
 			{
-				code[i++] = a == 0 ? ValueStart : ValueContinue;
+				code[i++] = a == 0 ? ValueStart[0] : ValueContinue[0];
 				i = code.WriteValue(i, args[a]);
 			}
 
@@ -523,9 +536,9 @@ namespace Sylvan.Terminal
 			this.counter++;
 		}
 
-		public void SetInvert(bool on = true)
-		{
-			throw new NotImplementedException();
-		}
+		//public void SetInvert(bool on = true)
+		//{
+		//	throw new NotImplementedException();
+		//}
 	}
 }

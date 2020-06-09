@@ -2,7 +2,7 @@
   "profiles": {
     "Sylvan.Tools.AssemblyInfo": {
       "commandName": "Project",
-      "commandLineArgs": "Sylvan.Tools.SystemInfo.dll"
+      "commandLineArgs": "C:\\Users\\Mark\\source\\ImageSharp\\artifacts\\bin\\src\\ImageSharp\\Release\\netcoreapp3.1\\SixLabors.ImageSharp.dll"
     }
   }
 }

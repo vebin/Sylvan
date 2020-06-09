@@ -6,7 +6,7 @@ namespace Sylvan
 	public static class EventExtensions
 	{
 		/// <summary>
-		/// Invokes a multicast delegate, ensureing that all registered handlers are invoked and aggregating any exceptions.
+		/// Invokes a multicast delegate, ensuring that all registered handlers are invoked and aggregating any exceptions.
 		/// </summary>
 		/// <exception cref="AggregateException">If any registered handlers throw.</exception>
 		public static void InvokeAll<T>(this EventHandler<T> evt, object sender, T args) where T : class

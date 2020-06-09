@@ -37,12 +37,14 @@ namespace Sylvan.Tools
 			using IInfoWriter w = new TerminalInfoWriter(trm);
 
 			//using IInfoWriter w = new XmlInfoWriter(Console.Out, "AssemblyInfo");
-
 			w.WriteValue("Tool Version", typeof(AssemblyInfoTool).Assembly.GetName().Version.ToString());
-
 			if (args.Length < 1) return;
-				
 			var path = args[0];
+			AnalyzeAssembly(w, path);
+		}
+
+		static void AnalyzeAssembly(IInfoWriter w, string path)
+		{
 			var asm = LoadAssembly(path);
 
 			w.StartSection("Assembly");
@@ -54,7 +56,7 @@ namespace Sylvan.Tools
 			{
 				try
 				{
-					trm.WriteLine(attr.AttributeType.FullName.ToString());
+					w.WriteValue("A", attr.AttributeType.FullName.ToString());
 					foreach (var ca in attr.ConstructorArguments)
 					{
 						//	trm.WriteLine(ca.Value?.ToString());
@@ -71,7 +73,7 @@ namespace Sylvan.Tools
 
 			w.WriteData("Types", nsi);
 
-			
+
 		}
 
 		static IEnumerable<TypeInfo> AnalyzeTypes(Assembly asm)
@@ -430,7 +432,8 @@ namespace Sylvan.Tools
 						}
 					}
 				}
-				catch (Exception) { 
+				catch (Exception)
+				{
 					// there can be attributes that are defined in inaccessible assemblies.
 					// we don't care about them for this purpose though. We are only looking
 					// for the TargetFrameworkAttribute which comes from corelib.
