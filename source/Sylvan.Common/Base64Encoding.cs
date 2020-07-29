@@ -15,7 +15,7 @@ namespace Sylvan
 		const int DefaultLineLength = 76;
 
 		/// <summary>
-		/// Gets the default Base64Codec, which uses the standard Base64 alphabet.
+		/// Gets the default Base64Encoding, which uses the standard Base64 alphabet.
 		/// </summary>
 		public static readonly Base64Encoding Default;
 
@@ -56,9 +56,9 @@ namespace Sylvan
 		readonly int lineLength;
 
 		/// <summary>
-		/// Creates a new Base64Codec.
+		/// Creates a new Base64Encoding.
 		/// </summary>
-		public Base64Encoding()
+		private Base64Encoding()
 		{
 			this.encodeMap = DefaultEncodeMap;
 			this.decodeMap = DefaultDecodeMap;
@@ -72,105 +72,85 @@ namespace Sylvan
 			this.decodeMap = DefaultDecodeMap;
 			this.lineLength = lineLength;
 		}
-
-		/// <summary>
-		/// Base64 encodes data.
-		/// </summary>
-		/// <param name="data">The input data.</param>
-		/// <returns>A base64 encoded string.</returns>
-		public string Encode(byte[] data)
-		{
-			var bufferSize = GetOutputBufferLength(data.Length);
-			char[] chars = new char[bufferSize];
-			int lineIdx = 0;
-			var len = EncodeInternal(data, 0, chars, 0, data.Length, ref lineIdx);
-			return new String(chars, 0, len);
-		}
-
-		/// <summary>
-		/// Base64 encodes data.
-		/// </summary>
-		public void Encode(Stream iStream, TextWriter writer)
-		{
-			// this buffer length MUST be a multiple of three for
-			// this to work properly
-			const int BufferLength = 3 * 0x1000;
-			byte[] iBuffer = new byte[BufferLength];
-			char[] oBuffer = new char[GetOutputBufferLength(BufferLength)];
-			int len;
-			int lineIdx = 0;
-			while ((len = iStream.Read(iBuffer, 0, BufferLength)) > 0)
-			{
-				int count = EncodeInternal(iBuffer, 0, oBuffer, 0, len, ref lineIdx);
-				writer.Write(oBuffer, 0, count);
-			}
-		}
-
+		
 		public int Encode(byte[] src, int srcOffset, char[] dst, int dstOffset, int count)
 		{
-			if (src == null) throw new ArgumentNullException("src");
-			if (dst == null) throw new ArgumentNullException("dst");
-			if (count < 0) throw new ArgumentOutOfRangeException("count");
-			if (srcOffset + count > src.Length) throw new ArgumentException("src", "The length of src is less than srcOffset plus count.");
+			if (src == null) throw new ArgumentNullException(nameof(src));
+			if (dst == null) throw new ArgumentNullException(nameof(dst));
+			if (count < 0 || srcOffset + count > src.Length) throw new ArgumentOutOfRangeException(nameof(count));
 
 			var outputLen = GetOutputBufferLength(count);
-
-			if (dstOffset + outputLen > dst.Length) throw new ArgumentException("dst", "The length of dst is less than srcOffset plus count * 2.");
-			int lineIdx = 0;
-			return EncodeInternal(src, srcOffset, dst, dstOffset, count, ref lineIdx);
+			if (dstOffset + outputLen > dst.Length) throw new ArgumentOutOfRangeException(nameof(dstOffset));
+		
+			return EncodeInternal(src, srcOffset, dst, dstOffset, count);
 		}
 
-		int EncodeInternal(byte[] src, int srcOffset, char[] dst, int dstOffset, int count, ref int lineIdx)
+		unsafe int EncodeInternal(byte[] src, int srcOffset, char[] dst, int dstOffset, int count)
 		{
 			// callers of this need to verify that count % 3 == 0, 
 			// unless it is the last block of data being written.
-
+			var c = count - 2;
+			int lineIdx = 0;
 			int startOffset = dstOffset;
-
-			for (int i = 0; i < count - 2; i += 3)
+			fixed (byte* sp = &src[srcOffset])
+			fixed (char* dp = &dst[dstOffset])
+			fixed (char* ap = encodeMap)
 			{
-				byte b0 = src[srcOffset++];
-				byte b1 = src[srcOffset++];
-				byte b2 = src[srcOffset++];
-				dst[dstOffset++] = encodeMap[(b0 >> 2) & 0x3F]; // b0 top 6 bits
-				dst[dstOffset++] = encodeMap[((b0 & 0x03) << 4) | ((b1 >> 4) & 0x0F)]; // b0 bottom 2, b1 top 4
-				dst[dstOffset++] = encodeMap[((b1 & 0x0F) << 2) | ((b2 >> 6) & 0x03)]; // b1 bottom 4, b2 top 2
-				dst[dstOffset++] = encodeMap[(b2 >> 0) & 0x3F]; // b2 bottom 6 bits
+				var spp = sp;
+				var dpp = dp;
 
-				lineIdx += 4;
+				for (int i = 0; i < c; i += 3)
+				{
+					if (lineLength > 0 && lineIdx >= lineLength)
+					{
+						*dpp++ = '\r';
+						*dpp++ = '\n';
+						lineIdx = 0;
+					}
+
+					byte b0 = *spp++;
+					byte b1 = *spp++;
+					byte b2 = *spp++;
+					*dpp++ = ap[(b0 >> 2)];
+					*dpp++ = ap[(((b0 & 0x03) << 4) | (b1 >> 4))];
+					*dpp++ = ap[(((b1 & 0x0F) << 2) | (b2 >> 6))];
+					*dpp++ = ap[(b2 & 0x3F)];
+
+					lineIdx += 4;
+				}
 				if (lineLength > 0 && lineIdx >= lineLength)
 				{
-					dst[dstOffset++] = '\r';
-					dst[dstOffset++] = '\n';
+					*dpp++ = '\r';
+					*dpp++ = '\n';
 					lineIdx = 0;
+				}
+
+				// Handle the tail of the data.  There are 0, 1, or 2 remaining bytes.
+				// The tail characters are enough to get the decode algorithm to
+				// recover the byte(s).
+
+				int rem = count - (int)(spp - sp);
+				if (rem == 1)
+				{
+					var b0 = *spp++;
+					*dpp++ = *(ap + (b0 >> 2));
+					*dpp++ = *(ap + ((b0 & 0x03) << 4));
+					*dpp++ = '=';
+					*dpp++ = '=';
+				}
+				else if (rem == 2)
+				{
+					var b0 = *spp++;
+					var b1 = *spp++;
+					*dpp++ = *(ap + (b0 >> 2));
+					*dpp++ = *(ap + (((b0 & 0x03) << 4) | (b1 >> 4)));
+					*dpp++ = *(ap + ((b1 & 0x0F) << 2));
+					*dpp++ = '=';
 				}
 			}
 
-			// Handle the tail of the data.  There are 0, 1, or 2 remaining bytes.
-			// The tail characters are enough to get the decode algorithm to
-			// recover the byte(s).
-
-			int rem = count % 3;
-			if (rem == 1)
-			{
-				var b0 = src[srcOffset++];
-				dst[dstOffset++] = encodeMap[(b0 >> 2) & 0x3F]; // top 6 bits
-				dst[dstOffset++] = encodeMap[(b0 & 0x03) << 4]; // bottom 2 bits
-				dst[dstOffset++] = '=';
-				dst[dstOffset++] = '=';
-			}
-			else if (rem == 2)
-			{
-				var b0 = src[srcOffset++];
-				var b1 = src[srcOffset++];
-				dst[dstOffset++] = encodeMap[(b0 >> 2) & 0x3F]; // top 6 bits
-				dst[dstOffset++] = encodeMap[((b0 & 0x03) << 4) | ((b1 >> 4) & 0x0F)]; // 2,4 bits
-				dst[dstOffset++] = encodeMap[(b1 & 0x0F) << 2]; // last 4 bits
-				dst[dstOffset++] = '=';
-			}
-
 			return dstOffset - startOffset;
-		}
+		}				
 
 		/// <summary>
 		/// Decodes a base64 encoded string.
@@ -180,6 +160,9 @@ namespace Sylvan
 		/// <returns>The decoded data.</returns>
 		public byte[] Decode(string src)
 		{
+			if (src == null) throw new ArgumentNullException(nameof(src));
+			if (src.Length == 0) return Array.Empty<byte>();
+
 			byte[] buffer = new byte[(src.Length * 3 + 3) / 4];
 
 			// decoder state.
@@ -198,6 +181,7 @@ namespace Sylvan
 		/// <returns>The decoded data.</returns>
 		public byte[] Decode(char[] src)
 		{
+			if (src == null) throw new ArgumentNullException(nameof(src));
 			// decoder state.
 			int accum = 0;
 			int bitCount = 0;
@@ -215,6 +199,9 @@ namespace Sylvan
 		/// <param name="oStream">The stream to capture the decoded data.</param>
 		public void Decode(TextReader reader, Stream oStream)
 		{
+			if (reader == null) throw new ArgumentNullException(nameof(reader));
+			if (oStream == null) throw new ArgumentNullException(nameof(oStream));
+
 			const int BufferLength = 0x1000;
 			char[] iBuffer = new char[GetOutputBufferLength(BufferLength)];
 			byte[] oBuffer = new byte[BufferLength];
@@ -228,7 +215,7 @@ namespace Sylvan
 			}
 		}
 
-		int DecodeInternal(ReadOnlySpan<char> src, Span<byte> dst, int count, ref int accum, ref int bitCount)
+		unsafe int DecodeInternal(ReadOnlySpan<char> src, Span<byte> dst, int count, ref int accum, ref int bitCount)
 		{
 			int srcIdx = 0;
 			int dstIdx = 0;
@@ -253,7 +240,5 @@ namespace Sylvan
 			}
 			return dstIdx;
 		}
-
-		
 	}
 }

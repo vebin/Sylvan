@@ -18,14 +18,16 @@ namespace Sylvan.IO
 	{
 		const int DefaultBlockShift = 12; // default to 4k blocks
 		const int InitialBlockCount = 8;
-		int blockShift;
-		int blockSize;
-		int BlockMask => this.blockSize - 1;
+		
+		readonly ArrayPool<byte> bufferPool;
+		readonly int blockShift;
+		readonly int blockSize;
+		readonly int blockMask;
+		readonly bool clearOnReturn;
 
 		long length;
 		long position;
-		bool clearOnReturn;
-		ArrayPool<byte> bufferPool;
+		
 
 		byte[]?[] blocks;
 
@@ -51,17 +53,19 @@ namespace Sylvan.IO
 			this.blocks = new byte[]?[InitialBlockCount];
 			this.blockShift = blockShift;
 			this.blockSize = 1 << blockShift;
+			this.blockMask = blockSize - 1;
 			this.clearOnReturn = clearOnReturn;
 		}
 
+		/// <inheritdoc/>
 		public override bool CanRead => true;
-
+		/// <inheritdoc/>
 		public override bool CanSeek => true;
-
+		/// <inheritdoc/>
 		public override bool CanWrite => true;
-
+		/// <inheritdoc/>
 		public override long Length => length;
-
+		/// <inheritdoc/>
 		public override long Position
 		{
 			get
@@ -74,21 +78,17 @@ namespace Sylvan.IO
 			}
 		}
 
+		/// <inheritdoc/>
 		public override void Flush()
 		{
 		}
 
-
+		/// <inheritdoc/>
 		public override int Read(byte[] buffer, int offset, int count)
 		{
 			if (buffer == null) throw new ArgumentNullException(nameof(buffer));
 			if (count < 0) throw new ArgumentOutOfRangeException(nameof(count));
 			if (offset + count > buffer.Length) throw new ArgumentOutOfRangeException(nameof(offset));
-
-			var shift = this.blockShift;
-			var blockMask = BlockMask;
-			var blockSize = this.blockSize;
-
 
 			var avail = this.length - this.position;
 			var c = (int)(avail < count ? avail : count);
@@ -96,7 +96,7 @@ namespace Sylvan.IO
 			var pos = this.position;
 			while (c > 0)
 			{
-				var blockIdx = pos >> shift;
+				var blockIdx = pos >> blockShift;
 				var curBlock = blocks[blockIdx];
 				var blockOffset = (int)(pos & blockMask);
 				var blockRem = blockSize - blockOffset;
@@ -120,6 +120,7 @@ namespace Sylvan.IO
 			return len;
 		}
 
+		/// <inheritdoc/>
 		public override long Seek(long offset, SeekOrigin origin)
 		{
 			long pos = 0;
@@ -141,6 +142,7 @@ namespace Sylvan.IO
 			return pos;
 		}
 
+		/// <inheritdoc/>
 		public override void SetLength(long value)
 		{
 			if (value < 0) throw new ArgumentOutOfRangeException(nameof(value));
@@ -166,6 +168,7 @@ namespace Sylvan.IO
 			this.length = value;
 		}
 
+		/// <inheritdoc/>
 		public override void Write(byte[] buffer, int offset, int count)
 		{
 			if (buffer == null)
@@ -180,7 +183,7 @@ namespace Sylvan.IO
 			var blockMask = blockSize - 1;
 
 			var endLength = this.position + count;
-			var reqBlockCount = (endLength + (int)blockMask) >> shift;
+			var reqBlockCount = (endLength + blockMask) >> shift;
 
 			var blocks = this.blocks;
 			if (reqBlockCount > blocks.Length)
@@ -216,23 +219,21 @@ namespace Sylvan.IO
 				pos = pos + c;
 				offset += c;
 			}
-			this.position = (long)pos;
+			this.position = pos;
 			if (this.position > this.length)
 				this.length = this.position;
 		}
 
+		/// <inheritdoc/>
 		public override async Task CopyToAsync(Stream destination, int bufferSize, CancellationToken cancellationToken)
 		{
 			if (destination == null) throw new ArgumentNullException(nameof(destination));
-			var shift = this.blockShift;
-			var blockMask = BlockMask;
-			var blockSize = this.blockSize;
 
 			while (position < length)
 			{
 				var rem = length - position;
 				cancellationToken.ThrowIfCancellationRequested();
-				var blockIdx = position >> shift;
+				var blockIdx = position >> blockShift;
 				var block = this.blocks[blockIdx];
 				var blockOffset = (int)(position & blockMask);
 				var blockCount = blockSize - blockOffset;
@@ -242,6 +243,7 @@ namespace Sylvan.IO
 			}
 		}
 
+		/// <inheritdoc/>
 		protected override void Dispose(bool disposing)
 		{
 			foreach (var block in this.blocks)

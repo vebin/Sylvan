@@ -49,9 +49,9 @@ namespace Sylvan.Data
 
 		int c = 0;
 
-		public void AddColumn<T0>(string name, Func<T, T0> func)
+		public void AddColumn<T0>(string name, Func<T, T0> func) 
 		{
-			Func<T, object> valueSelector = item => func(item);
+			Func<T, object> valueSelector = item => func(item)!;
 			this.columns.Add(new ColumnInfo(c++, name, typeof(T0), func, valueSelector));
 		}
 
@@ -171,7 +171,8 @@ namespace Sylvan.Data
 
 		public override IEnumerator GetEnumerator()
 		{
-			throw new NotImplementedException();
+			while (this.Read())
+				yield return this;
 		}
 
 		public override float GetFloat(int ordinal)

@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 
 namespace Sylvan.Threading
 {
-	public sealed class SignalEvent : IDisposable
+	sealed class SignalEvent : IDisposable
 	{
 		// This is the main triggering event.
 		readonly EventWaitHandle set;
@@ -53,7 +53,7 @@ namespace Sylvan.Threading
 			return this.tcs!.Task;
 		}
 
-		public void Raise()
+		public void Set()
 		{
 			reset.Reset();
 			set.Set();
@@ -80,6 +80,7 @@ namespace Sylvan.Threading
 				if (disposing)
 				{
 					this.cts.Cancel();
+					this.cts.Dispose();
 					this.set.Dispose();
 					this.reset.Dispose();				
 				}
